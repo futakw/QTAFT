@@ -10,5 +10,11 @@
         "top1_adv_org": 16.2,
         "top1_prompt": 46.6,
         "top1_org": 46.6
+    },
+    "STL10": {
+        "top1_adv_prompt": 63.0,
+        "top1_adv_org": 63.0,
+        "top1_prompt": 92.7,
+        "top1_org": 92.7
     }
 }

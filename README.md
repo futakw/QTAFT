@@ -22,7 +22,7 @@ pip install git+https://github.com/openai/CLIP.git
 # Data Preparation
 ## Standard Datasets
 
-Please download datasets (ImageNet-1k, CIFAR100, STL10, SUN397, Caltech101, etc.)
+Please download datasets (ImageNet-1k, Caltech101, etc.)
 following their official instructions.
 
 ## ImageNet Captions (required for QTAFT)
