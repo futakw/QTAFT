@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 from utils.model import convert_models_to_fp32
 from dataloader import build_val_datasets, get_val_loader_list
-from evaluation import build_zeroshot_weights_dict, validate_zeroshot
+from eval_utils import build_zeroshot_weights_dict, validate_zeroshot
 import numpy as np
 import clip
 
@@ -15,10 +15,10 @@ def s2bool(v):
 
 
 def parse_option():
-    parser = argparse.ArgumentParser("Visual Prompting for CLIP")
+    parser = argparse.ArgumentParser("Evaluation for CLIP")
 
     # model
-    parser.add_argument("--model", type=str, default="", choices=["clip", "longclip"])
+    parser.add_argument("--model", type=str, default="", choices=["clip"])
     parser.add_argument("--imagenet_root", type=str, default="../ILSVRC2012")
     parser.add_argument("--arch", type=str, default="", choices=["vit_b32", "vit_b16", "vit_l14"])
 
@@ -37,7 +37,6 @@ def parse_option():
     parser.add_argument("--test_n_samples", type=int, default=np.inf)
 
     # eval
-    parser.add_argument("--out_dir_name", type=str, default="eval", help="output directory for evaluation")
     parser.add_argument("--CW", action="store_true")
     parser.add_argument("--autoattack", action="store_true")
     parser.add_argument("--reeval_dataset", type=str, nargs="+", default=[])
@@ -130,7 +129,8 @@ if __name__ == "__main__":
     res_name = get_res_name(args, TEST_EPS_INT, TEST_STEPSIZE_INT, TEMPLATE=args.template) 
 
     # output dir
-    os.makedirs(args.out_dir_name, exist_ok=True)
+    out_dir = os.path.join(os.path.dirname(args.load_path), "eval")
+    os.makedirs(out_dir, exist_ok=True)
 
     acc, results = validate_zeroshot(
         val_loader_list,
@@ -140,6 +140,6 @@ if __name__ == "__main__":
         criterion,
         args,
         max_num=args.test_n_samples,
-        out_dir=args.out_dir_name,
+        out_dir=out_dir,
         save_name=res_name,
     )

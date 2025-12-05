@@ -59,16 +59,12 @@ def build_train_loader(args, imagenet_root, preprocess224):
     return train_dataset, train_loader
 
 
-def build_val_datasets(args):
-    # 旧 eval と同じ val_dataset_name
-    val_dataset_name = [
+def build_val_datasets(args, val_dataset_name=[
         "cifar10", "cifar100", "STL10", "SUN397", "StanfordCars", "Food101",
         "oxfordpet", "flowers102", "dtd", "EuroSAT", "fgvc_aircraft", "PCAM",
         "ImageNet", "Caltech101",
         "ImageNet-S", "ImageNet-R", "ImageNet-v2", "ImageNet-O", "ImageNet-A",
-    ]
-
-    # transforms も旧 eval と同じ
+    ]):
     preprocess = transforms.Compose([transforms.ToTensor()])
     preprocess224 = transforms.Compose([
         transforms.Resize(256),
@@ -77,6 +73,12 @@ def build_val_datasets(args):
     ])
     preprocess224_interpolate = transforms.Compose([
         transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+    ])
+    preprocess_caltech = transforms.Compose([
+        transforms.Lambda(lambda img: img.convert("RGB")),  # for grayscale images in Caltech101
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
         transforms.ToTensor(),
     ])
 
@@ -88,7 +90,7 @@ def build_val_datasets(args):
 
     imgnet_full = args.imagenet_root
 
-    to_dl = False
+    to_dl = True  # set to False if datasets are already downloaded
     for each in val_dataset_name:
         print("Loading Validation Dataset", each)
         if each == "cifar10":
@@ -97,7 +99,7 @@ def build_val_datasets(args):
             ds = CIFAR100(args.root, transform=preprocess, download=to_dl, train=False)
             ds.classes = [c.replace("_", " ") for c in ds.classes]
         elif each == "Caltech101":
-            ds = Caltech101(args.root, target_type="category", transform=preprocess224, download=to_dl)
+            ds = Caltech101(args.root, target_type="category", transform=preprocess_caltech, download=to_dl)
             ds.classes = classnames_json["caltech101"]
             ds.classes = refine_classname(ds.classes)
             rename_dict = {
@@ -120,7 +122,7 @@ def build_val_datasets(args):
                 new_classes.append(cl)
             ds.classes = new_classes
         elif each == "Caltech256":
-            ds = Caltech256(args.root, transform=preprocess224, download=to_dl)
+            ds = Caltech256(args.root, transform=preprocess_caltech, download=to_dl)
         elif each == "PCAM":
             ds = PCAM(args.root, split="test", transform=preprocess224, download=to_dl)
             ds.classes = classnames_json["pcam"]

@@ -15,7 +15,6 @@ imagenet_root=../ILSVRC2012
 batch_size=16
 test_eps=4
 arch=vit_b16
-out_dir_name="eval_zeroshot"
 path="./save/qtaft/ImageNet-caps-/clip-vit_b16/QTAFT/QTAFT_ImageNet_clip_vit_b16_adamw-0.9-0.95_eps4.0_lr1e-05_ep2_dec0.0001_b128_warm1000_loss=10.0/checkpoint_10000.pth.tar"
 model=clip
 template=basic
@@ -34,7 +33,6 @@ python eval_zeroshot.py \
     --test_eps $test_eps \
     --test_numsteps 100 \
     --test_n_samples 1000 \
-    --out_dir_name $out_dir_name \
     --template $template \
     --overwrite_zeroshot_weights $overwrite_zeroshot_weights \
     --autoattack

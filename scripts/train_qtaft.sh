@@ -13,10 +13,11 @@
 root=../data
 imagenet_root=../ILSVRC2012
 dataset=ImageNet
-model_dir="save/qtaft/"
+model_dir="save"
 
 name=QTAFT
 image_caption_root=/home/fmg2/waseda/LanguageForVisionRobustness/InternVL/captions/ImageNet/InternVL2_5-8B/Describe_the_image_in_detail_within_50_words.
+caps_name=InternVL2_5-8B
 
 
 #################### Hyperparameters ####################
@@ -38,6 +39,7 @@ python train_qtaft.py \
     --batch_size $batch_size \
     --root $root \
     --imagenet_root $imagenet_root \
+    --caps_name $caps_name \
     --image_caption_root $image_caption_root \
     --dataset $dataset \
     --model_dir $model_dir \

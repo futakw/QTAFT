@@ -139,7 +139,7 @@ def validate_zeroshot(
             print(f"Re-evaluating {dataset_name}...")
         elif dataset_name in results_dict and not args.overwrite:
             print(f"Results for {dataset_name} already exist. Skipping...")
-            acc_all.append(results_dict[dataset_name]["top1_adv_prompt"])
+            acc_all.append(results_dict[dataset_name]["top1_adv"])
             continue
 
         binary = ["PCAM", "hateful_memes"]
@@ -149,14 +149,12 @@ def validate_zeroshot(
 
         batch_time = AverageMeter("Time", ":6.3f")
         losses = AverageMeter("Loss", ":.4e")
-        top1_org = AverageMeter("Original Acc@1", ":6.2f")
-        top1_prompt = AverageMeter("AT-Model Acc@1", ":6.2f")
-        top1_adv_org = AverageMeter("Adv Original Acc@1", ":6.2f")
-        top1_adv_prompt = AverageMeter("Adv AT-Model Acc@1", ":6.2f")
+        top1_clean = AverageMeter("Clean Acc@1", ":6.2f")
+        top1_adv = AverageMeter("Adv Acc@1", ":6.2f")
 
         progress = ProgressMeter(
             len(val_loader),
-            [batch_time, losses, top1_org, top1_prompt, top1_adv_org, top1_adv_prompt],
+            [batch_time, losses, top1_clean, top1_adv],
             prefix=dataset_name + "_Validate: ",
         )
 
@@ -181,14 +179,13 @@ def validate_zeroshot(
                     # measure accuracy and record loss
                     acc1 = accuracy(output, target, topk=(1,))
                     losses.update(loss.item(), images.size(0))
-                    top1_org.update(acc1[0].item(), images.size(0))
-                    top1_prompt.update(acc1[0].item(), images.size(0))
+                    top1_clean.update(acc1[0].item(), images.size(0))
 
                 torch.cuda.empty_cache()
 
                 # generate adv example
                 if args.CW:
-                    delta_prompt = attack_CW(
+                    delta = attack_CW(
                         model,
                         criterion,
                         images,
@@ -199,7 +196,7 @@ def validate_zeroshot(
                         "l_inf",
                         epsilon=args.test_eps,
                     )
-                    attacked_images = images + delta_prompt
+                    attacked_images = images + delta
                 elif args.autoattack:
                     attacked_images = attack_auto(
                         model,
@@ -210,7 +207,7 @@ def validate_zeroshot(
                         attacks_to_run=attacks_to_run,
                     )
                 else:
-                    delta_prompt = attack_pgd(
+                    delta = attack_pgd(
                         model,
                         criterion,
                         images,
@@ -221,7 +218,7 @@ def validate_zeroshot(
                         "l_inf",
                         epsilon=args.test_eps,
                     )
-                    attacked_images = images + delta_prompt
+                    attacked_images = images + delta
 
                 # compute output
                 torch.cuda.empty_cache()
@@ -235,8 +232,7 @@ def validate_zeroshot(
                 # measure accuracy and record loss
                 acc1 = accuracy(output_adv, target, topk=(1,))
                 losses.update(loss.item(), images.size(0))
-                top1_adv_org.update(acc1[0].item(), images.size(0))
-                top1_adv_prompt.update(acc1[0].item(), images.size(0))
+                top1_adv.update(acc1[0].item(), images.size(0))
 
             # measure elapsed time
             batch_time.update(time.time() - end)
@@ -257,24 +253,19 @@ def validate_zeroshot(
 
         print(
             dataset_name
-            + " * Adv Prompt Acc@1 {top1_adv_prompt.avg:.3f} Adv Original Acc@1 {top1_adv_org.avg:.3f} "
-            "*  Prompt Acc@1 {top1_prompt.avg:.3f} Original Acc@1 {top1_org.avg:.3f}".format(
-                top1_adv_prompt=top1_adv_prompt,
-                top1_adv_org=top1_adv_org,
-                top1_prompt=top1_prompt,
-                top1_org=top1_org,
+            + " * Adv Acc@1 {top1_adv.avg:.3f} "
+            "*  Acc@1 {top1_clean.avg:.3f}".format(
+                top1_adv=top1_adv,
+                top1_clean=top1_clean,
             )
         )
-        acc_all.append(top1_adv_prompt.avg)
-
+        acc_all.append(top1_adv.avg)
         results_dict[dataset_name] = {
-            "top1_adv_prompt": top1_adv_prompt.avg,
-            "top1_adv_org": top1_adv_org.avg,
-            "top1_prompt": top1_prompt.avg,
-            "top1_org": top1_org.avg,
+            "top1_adv": top1_adv.avg,
+            "top1_clean": top1_clean.avg,
         }
 
-        if dataset_name == "cifar10" and top1_org.avg < 0.2:
+        if dataset_name == "cifar10" and top1_clean.avg < 0.2:
             print("cifar10 acc is too low. Something is wrong. Exiting...")
             exit()
 

@@ -22,7 +22,7 @@ from tqdm import tqdm
 from torch.cuda.amp import GradScaler, autocast
 
 from dataloader import build_train_loader, build_val_datasets, get_val_loader_list
-from evaluation import build_zeroshot_weights_dict, validate_zeroshot
+from eval_utils import build_zeroshot_weights_dict, validate_zeroshot
 
 import clip
 
@@ -62,7 +62,7 @@ def s2bool(s):
     return s.lower() in ["true", "1", "t", "y", "yes"]
 
 def parse_option():
-    parser = argparse.ArgumentParser("Visual Prompting for CLIP (caption-only)")
+    parser = argparse.ArgumentParser("Adversarial Finetuning for CLIP")
 
     # logging / schedule
     parser.add_argument("--print_freq", type=int, default=500, help="print frequency")
@@ -95,7 +95,6 @@ def parse_option():
     parser.add_argument("--test_numsteps", type=int, default=5)
     parser.add_argument("--test_stepsize", type=float, default=1.0)
     parser.add_argument("--test_n_samples", type=int, default=1000)
-    parser.add_argument("--patience", type=int, default=1000)
 
     # model / data
     parser.add_argument("--model", type=str, default="clip", choices=["clip"])
@@ -111,12 +110,12 @@ def parse_option():
     parser.add_argument("--filename", type=str, default=None)
     parser.add_argument("--filename_suffix", type=str, default="")
     parser.add_argument("--trial", type=int, default=1)
-    parser.add_argument("--out_dir_name", type=str, default="eval")
     parser.add_argument("--gpu", type=int, default=None)
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--last_num_ft", type=int, default=-1)
 
     # evaluation config
+    parser.add_argument("--out_dir_name", type=str, default="eval_tr")
     parser.add_argument("--evaluate", action="store_true")
     parser.add_argument("--template", type=str, default="basic", choices=["basic", "default"])
     parser.add_argument("--zeroshot_weights_dir", type=str, default="templates/zeroshot-weights")
@@ -141,21 +140,14 @@ def parse_option():
     args = parser.parse_args()
 
     # directory / filename
-    args.model_dir = os.path.join(
-        args.model_dir,
-        f"{args.dataset}-caps-{args.caps_name}",
-        f"{args.model}-{args.arch}",
-        args.name,
-    )
+    args.model_dir = os.path.join(args.model_dir, f"{args.model}_{args.arch}", args.name)
     os.makedirs(args.model_dir, exist_ok=True)
-
     optim_name = args.optim
     if args.optim == "adamw":
         optim_name = f"adamw-{args.opt_beta1}-{args.opt_beta2}"
-
     args.filename = "{}_{}_{}_{}_{}_eps{}_lr{}_ep{}_dec{}_b{}_warm{}_loss={}".format(
         args.name,
-        args.dataset,
+        args.dataset + "-" + args.caps_name,
         args.model,
         args.arch,
         optim_name,
@@ -675,17 +667,10 @@ def main():
         raise NotImplementedError
 
     # -------------- Data Loaders --------------
-    preprocess = transforms.Compose([transforms.ToTensor()])
     preprocess224 = transforms.Compose(
         [
             transforms.Resize(256),
             transforms.CenterCrop(224),
-            transforms.ToTensor(),
-        ]
-    )
-    preprocess224_interpolate = transforms.Compose(
-        [
-            transforms.Resize((224, 224)),
             transforms.ToTensor(),
         ]
     )
@@ -725,7 +710,7 @@ def main():
             args,
             max_num=args.test_n_samples, 
             out_dir=args.model_folder,  # or separate eval dir
-            save_name=res_name_epoch,
+            save_name=res_name,
         )
         results_dict_each_epoch["eval"] = results_dict
         print("Eval-only finished. Acc:", acc1_mean)
@@ -749,8 +734,20 @@ def main():
             args,
         )
 
+        # save last checkpoint
+        save_checkpoint(
+            {
+                "epoch": epoch + 1,
+                "step": step,
+                "vision_encoder_state_dict": model.module.visual.state_dict(),
+                "best_acc1": best_acc1,
+                "optimizer": optimizer.state_dict(),
+            },
+            args,
+            filename="checkpoint_last.pth.tar",
+        )
+
         # eval on a subset of datasets
-        res_name_epoch = f"epoch{epoch}_eps{int(args.test_eps*255)}_numsteps{args.test_numsteps}_stepsize{int(args.test_stepsize*255)}_PGD"
         if epoch % args.validate_freq == 0:
             acc1_mean, results_dict = validate_zeroshot(
                 val_loader_list[:3],
@@ -761,42 +758,9 @@ def main():
                 args,
                 max_num=args.test_n_samples, 
                 out_dir=args.model_folder,  # or separate eval dir
-                save_name=res_name_epoch,
+                save_name=None,
             )
             results_dict_each_epoch[epoch] = results_dict
-
-        # remember best acc@1 and save checkpoint
-        global best_acc1
-        is_best = acc1_mean > best_acc1
-        best_acc1 = max(acc1_mean, best_acc1)
-
-        save_checkpoint(
-            {
-                "epoch": epoch + 1,
-                "step": step,
-                "vision_encoder_state_dict": model.module.visual.state_dict(),
-                "best_acc1": best_acc1,
-                "optimizer": optimizer.state_dict(),
-            },
-            args,
-            is_best=is_best,
-        )
-
-        # save vision encoder
-        savefile = os.path.join(args.model_folder, "vision_encoder.pth.tar")
-        bestfile = os.path.join(args.model_folder, "best_vision_encoder.pth.tar")
-        torch.save(model.module.visual.state_dict(), savefile)
-        if is_best:
-            shutil.copyfile(savefile, bestfile)
-            print("saved best file")
-            epochs_since_improvement = 0
-            results_dict_each_epoch["best"] = results_dict
-        else:
-            epochs_since_improvement += 1
-            print(f"There's no improvement for {epochs_since_improvement} epochs.")
-            if epochs_since_improvement >= args.patience:
-                print("The training halted by early stopping criterion.")
-                break
 
     print("Experiment finished.")
 
@@ -831,7 +795,7 @@ def main():
             criterion_eval,
             pgd10_args,
             max_num=pgd10_args.test_n_samples, 
-            out_dir=pgd10_args.model_folder,  # or separate eval dir
+            out_dir=save_dir, 
             save_name=res_name_pgd10,
         )
         print("PGD-10:", acc1_mean)
@@ -854,7 +818,7 @@ def main():
             criterion_eval,
             auto_args,
             max_num=auto_args.test_n_samples, 
-            out_dir=auto_args.model_folder,  # or separate eval dir
+            out_dir=save_dir, 
             save_name=res_name_auto,
         )
         print("AutoAttack:", acc1_mean)

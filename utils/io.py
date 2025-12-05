@@ -21,13 +21,9 @@ class Tee:
         self.file.flush()
 
 
-def save_checkpoint(state, args, is_best=False, filename="checkpoint.pth.tar"):
+def save_checkpoint(state, args, filename="checkpoint.pth.tar"):
     savefile = os.path.join(args.model_folder, filename)
-    bestfile = os.path.join(args.model_folder, "model_best.pth.tar")
     torch.save(state, savefile)
-    if is_best:
-        shutil.copyfile(savefile, bestfile)
-        print("saved best file")
 
 
 def fix_model_state_dict(state_dict):
