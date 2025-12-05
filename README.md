@@ -4,7 +4,7 @@ This repository contains the official implementation of our ACMMM 2025 paper
 **“Quality Text, Robust Vision: The Role of Language in Enhancing Visual Robustness of Vision-Language Models.”**
 
 ![Teaser](assets/teaser.png)
-![Method](assets/QTAFT_method.png)
+![Method](assets/QT-AFT_method.png)
 
 ---
 
