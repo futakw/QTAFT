@@ -167,6 +167,8 @@ def parse_option():
         args.warmup,
         args.w_i2t,
     )
+    if args.total_train_steps is not None:
+        args.filename += f"_totalsteps{args.total_train_steps}"
     args.model_folder = os.path.join(args.model_dir, args.filename)
     os.makedirs(args.model_folder, exist_ok=True)
 
@@ -422,7 +424,7 @@ def pgd(
     return data_clean + perturbation.detach()
 
 # ---------------------------------------------------------------------------
-# Train / Validate
+# Train 
 # ---------------------------------------------------------------------------
 
 def train(
@@ -709,7 +711,8 @@ def main():
     results_dict_each_epoch = {}
 
     args.start_epoch = 0
-    args.total_train_steps = len(train_loader) * args.epochs
+    if args.total_train_steps is None:
+        args.total_train_steps = len(train_loader) * args.epochs
 
     # optional: evaluate only
     if args.evaluate:

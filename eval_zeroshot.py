@@ -1,5 +1,6 @@
 # eval_zeroshot.py
-from argparse import ArgumentParser
+import os
+import argparse
 import torch
 import torch.nn as nn
 from utils.model import convert_models_to_fp32
@@ -23,13 +24,11 @@ def parse_option():
 
     parser.add_argument("--load_path", type=str, default="", help="path to load model")
 
-    parser.add_argument("--batch_size", type=int, default=32, help="batch size")
+    parser.add_argument("--test_batch_size", type=int, default=32, help="batch size")
     parser.add_argument("--num_workers", type=int, default=8, help="number of workers")
 
     # dataset
     parser.add_argument("--root", type=str, default="../data", help="dataset")
-    parser.add_argument("--dataset", type=str, default="cifar100", help="dataset")
-    parser.add_argument("--image_size", type=int, default=224, help="image size")
 
     # test
     parser.add_argument("--test_eps", type=float, default=2, help="momentum")
@@ -104,7 +103,7 @@ if __name__ == "__main__":
     model = torch.nn.DataParallel(model).to(device)
     model.eval()
 
-    # vision encoder
+    # load vision encoder
     checkpoint = torch.load(args.load_path, map_location=device)
     try:
         model.module.visual.load_state_dict(checkpoint["vision_encoder_state_dict"])
@@ -129,6 +128,9 @@ if __name__ == "__main__":
     args.test_eps = args.test_eps / 255.0
     args.test_stepsize = args.test_stepsize / 255.0
     res_name = get_res_name(args, TEST_EPS_INT, TEST_STEPSIZE_INT, TEMPLATE=args.template) 
+
+    # output dir
+    os.makedirs(args.out_dir_name, exist_ok=True)
 
     acc, results = validate_zeroshot(
         val_loader_list,

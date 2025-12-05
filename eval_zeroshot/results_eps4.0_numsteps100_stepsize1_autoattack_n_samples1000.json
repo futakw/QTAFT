@@ -1,0 +1,14 @@
+{
+    "cifar10": {
+        "top1_adv_prompt": 30.0,
+        "top1_adv_org": 30.0,
+        "top1_prompt": 69.3,
+        "top1_org": 69.3
+    },
+    "cifar100": {
+        "top1_adv_prompt": 16.2,
+        "top1_adv_org": 16.2,
+        "top1_prompt": 46.6,
+        "top1_org": 46.6
+    }
+}

@@ -225,7 +225,7 @@ def get_val_loader_list(args, val_dataset_list):
 
         val_loader = DataLoader(
             ds,
-            batch_size=args.batch_size,
+            batch_size=args.test_batch_size,
             pin_memory=False,
             num_workers=args.num_workers,
             shuffle=False,

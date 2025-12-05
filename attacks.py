@@ -35,9 +35,9 @@ def forward_classification(images_unnorm, model, zeroshot_weights):
     # 旧 eval と完全同じロジック
     images = clip_img_preprocessing(images_unnorm)
     if hasattr(model, "module"):
-        image_features = model.module.encode_image(images, ind_prompt=None)
+        image_features = model.module.encode_image(images)
     else:
-        image_features = model.encode_image(images, ind_prompt=None)
+        image_features = model.encode_image(images)
     image_features = image_features / image_features.norm(dim=-1, keepdim=True)
     logits = 100.0 * image_features @ zeroshot_weights
     return logits
