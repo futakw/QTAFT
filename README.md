@@ -33,6 +33,11 @@ This repository contains:
 - Evaluation scripts
 - Pretrained checkpoints
 - Reproducible experiment configurations
+
+---
+
+# QTAFT checkpoints CLIP-B/16, CLIP-L/14
+- https://huggingface.co/futakw/clip-qt-aft
   
 ---
 
