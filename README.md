@@ -5,7 +5,30 @@ This repository contains the official implementation of our ACMMM 2025 paper
 
 Author: Futa Waseda
 
-arXiv: https://arxiv.org/abs/2507.16257
+## Overview
+
+QTAFT (Quality-Text-guided Adversarial Fine-Tuning) is a simple and effective adversarial fine-tuning framework for vision-language models (VLMs). By leveraging high-quality textual supervision during adversarial training, QTAFT substantially improves adversarial robustness while preserving or even improving clean accuracy.
+
+## Highlights
+
+- 🚀 Improves adversarial robustness of CLIP-based vision-language models
+- 📝 Exploits high-quality language supervision during adversarial fine-tuning
+- ⚖️ Achieves a better robustness–accuracy trade-off than existing methods
+- 🔬 Evaluated on multiple datasets and adversarial attack settings
+
+## Paper
+
+- ACM Digital Library: [(link)](https://dl.acm.org/doi/pdf/10.1145/3746027.3755623)
+- arXiv: [(link)](https://arxiv.org/abs/2507.16257)
+
+## Code
+
+This repository contains:
+- Training code for QTAFT
+- Evaluation scripts
+- Pretrained checkpoints
+- Reproducible experiment configurations
+  
 
 ![Teaser](assets/teaser.png)
 <br><br>
