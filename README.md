@@ -36,7 +36,7 @@ This repository contains:
 
 ---
 
-# QTAFT checkpoints CLIP-B/16, CLIP-L/14
+# QTAFT checkpoints (CLIP-B/16, CLIP-L/14)
 - https://huggingface.co/futakw/clip-qt-aft
   
 ---
